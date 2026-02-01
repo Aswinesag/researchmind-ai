@@ -1,0 +1,37 @@
+# Core Framework
+streamlit
+python-dotenv
+
+# LLM & RAG
+langchain
+langchain-groq
+langchain-community
+
+# Embeddings & Vector Store
+sentence-transformers
+faiss-cpu
+
+# PDF Processing
+PyPDF2
+pdfplumber
+
+# Research Paper APIs
+arxiv
+pymed
+requests
+
+# Data Processing
+pandas
+numpy
+
+# Visualization
+plotly
+networkx
+
+# Utilities
+tqdm
+aiohttp
+tenacity
+
+# Additional
+Pillow
