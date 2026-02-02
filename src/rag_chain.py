@@ -3,7 +3,14 @@ RAG Chain - Integrates retrieval with LLM generation using LangChain and Groq
 """
 import logging
 from typing import List, Dict, Any, Optional
+from pathlib import Path
+import sys
+
+# Add prompts to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import config
+from prompts.research_prompts import PROMPT_TEMPLATES, get_prompt, detect_question_type
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +23,7 @@ class RAGChain:
         vector_store,
         embedding_generator,
         groq_api_key: Optional[str] = None,
-        model_name: str = "llama-3.3-70b-versatile",
+        model_name: str = "mixtral-8x7b-32768",
         top_k: int = 5,
         temperature: float = 0.1
     ):
@@ -132,46 +139,35 @@ class RAGChain:
         
         return "\n" + "="*80 + "\n".join(context_parts)
     
-    def create_prompt(self, query: str, context: str) -> str:
+    def create_prompt(self, query: str, context: str, use_smart_prompts: bool = True) -> str:
         """
         Create prompt for the LLM
         
         Args:
             query: User query
             context: Retrieved context
+            use_smart_prompts: Use question-type detection for specialized prompts
             
         Returns:
             Formatted prompt
         """
-        prompt = f"""You are a research assistant helping analyze academic papers. You have access to relevant excerpts from research papers.
-
-Your task is to answer the user's question based ONLY on the provided context from the papers. Follow these guidelines:
-
-1. CITATION FORMAT (IEEE):
-   - Cite sources as [1], [2], [3] etc. corresponding to the source numbers in the context
-   - Format: [Source Number] at the end of the sentence
-   - Example: "The transformer architecture uses self-attention mechanisms [1]."
-
-2. ANSWER REQUIREMENTS:
-   - Be precise and accurate
-   - Use information ONLY from the provided context
-   - If the context doesn't contain the answer, say "The provided papers do not contain information about..."
-   - Include relevant details like methodology, results, or findings
-   - Maintain academic tone
-
-3. STRUCTURE:
-   - Start with a direct answer
-   - Support with evidence from papers
-   - Include citations for each claim
-   - End with a brief summary if the answer is long
-
-CONTEXT FROM PAPERS:
-{context}
-
-USER QUESTION:
-{query}
-
-ANSWER:"""
+        if use_smart_prompts:
+            # Detect question type and use appropriate prompt
+            prompt_type = detect_question_type(query)
+            logger.info(f"Using prompt type: {prompt_type}")
+            
+            try:
+                if prompt_type == 'conversational':
+                    # For conversational, we'll handle this separately
+                    prompt = get_prompt('default', context=context, question=query)
+                else:
+                    prompt = get_prompt(prompt_type, context=context, question=query)
+            except Exception as e:
+                logger.warning(f"Error using specialized prompt: {e}, falling back to default")
+                prompt = get_prompt('default', context=context, question=query)
+        else:
+            # Use default prompt
+            prompt = get_prompt('default', context=context, question=query)
         
         return prompt
     
